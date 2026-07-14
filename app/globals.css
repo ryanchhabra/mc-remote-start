@@ -67,7 +67,8 @@ body::before {
 
 .scene[data-state="online"]   .glow-layer--online   { opacity: 1; }
 .scene[data-state="error"]    .glow-layer--error     { opacity: 1; }
-.scene[data-state="starting"] .glow-layer--starting {
+.scene[data-state="starting"] .glow-layer--starting,
+.scene[data-state="stopping"] .glow-layer--starting {
   opacity: 1;
   animation: glow-breathe 2.2s ease-in-out infinite;
 }
@@ -173,7 +174,8 @@ body::before {
 }
 
 .scene[data-state="online"]   .status-card { border-color: rgba(74, 222, 128, 0.32); }
-.scene[data-state="starting"] .status-card { border-color: rgba(245, 158, 11, 0.32); }
+.scene[data-state="starting"] .status-card,
+.scene[data-state="stopping"] .status-card { border-color: rgba(245, 158, 11, 0.32); }
 .scene[data-state="error"]    .status-card { border-color: rgba(239, 68, 68, 0.28); }
 
 .status-card-top {
@@ -201,7 +203,8 @@ body::before {
 }
 
 .scene[data-state="online"]   .status-badge { background: var(--green-bg); color: var(--green); }
-.scene[data-state="starting"] .status-badge { background: var(--amber-bg); color: var(--amber); }
+.scene[data-state="starting"] .status-badge,
+.scene[data-state="stopping"] .status-badge { background: var(--amber-bg); color: var(--amber); }
 .scene[data-state="error"]    .status-badge { background: var(--red-bg);   color: var(--red); }
 
 .status-card-body {
@@ -218,7 +221,8 @@ body::before {
 }
 
 .scene[data-state="online"]   .status-heading { color: var(--green); }
-.scene[data-state="starting"] .status-heading { color: var(--amber); }
+.scene[data-state="starting"] .status-heading,
+.scene[data-state="stopping"] .status-heading { color: var(--amber); }
 .scene[data-state="error"]    .status-heading { color: var(--red); }
 
 .status-detail {
@@ -306,11 +310,13 @@ body::before {
   outline-offset: 2px;
 }
 
-.scene[data-state="online"] .start-btn {
-  background: var(--surface-2);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  opacity: 1;
+.start-btn--stop {
+  background: var(--red);
+  color: #fff;
+}
+
+.start-btn--stop:focus-visible {
+  outline-color: var(--red);
 }
 
 .start-btn--pending {

@@ -10,13 +10,14 @@
 // backed version. Keep the same exported function names/signatures so
 // nothing else in the app needs to change.
 
-export type ServerState = "offline" | "starting" | "online" | "error";
+export type ServerState = "offline" | "starting" | "online" | "stopping" | "error";
+export type PendingCommand = "start" | "stop" | null;
 
 interface StoreShape {
   state: ServerState;
   detail: string;
   updatedAt: number;
-  pendingCommand: "start" | null;
+  pendingCommand: PendingCommand;
   playersOnline: number | null;
   playersMax: number | null;
   version: string | null;
@@ -71,6 +72,10 @@ export function setStatus(state: ServerState, detail = "", stats: ServerStats = 
 
 export function queueStartCommand() {
   store.pendingCommand = "start";
+}
+
+export function queueStopCommand() {
+  store.pendingCommand = "stop";
 }
 
 export function consumePendingCommand() {

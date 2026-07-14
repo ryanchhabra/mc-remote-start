@@ -6,7 +6,7 @@ function isAuthorized(req: Request) {
   return header === `Bearer ${process.env.AGENT_API_KEY}`;
 }
 
-const VALID_STATES: ServerState[] = ["offline", "starting", "online", "error"];
+const VALID_STATES: ServerState[] = ["offline", "starting", "online", "stopping", "error"];
 
 export async function POST(req: Request) {
   if (!isAuthorized(req)) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type ServerState = "offline" | "starting" | "online" | "error";
+type ServerState = "offline" | "starting" | "online" | "stopping" | "error";
 
 interface StatusResponse {
   state: ServerState;
@@ -18,6 +18,7 @@ const STATE_LABELS: Record<ServerState, string> = {
   offline:  "Stopped",
   starting: "Starting Up",
   online:   "Running",
+  stopping: "Shutting Down",
   error:    "Failed",
 };
 
@@ -25,6 +26,7 @@ const STATE_DETAILS: Record<ServerState, string> = {
   offline:  "The server is currently offline.",
   starting: "The server is booting up. This takes a minute.",
   online:   "The server is online and ready to join.",
+  stopping: "The server is shutting down.",
   error:    "The server failed to start.",
 };
 
@@ -32,6 +34,7 @@ const BADGE_LABELS: Record<ServerState, string> = {
   offline:  "Offline",
   starting: "Starting",
   online:   "Online",
+  stopping: "Stopping",
   error:    "Error",
 };
 
@@ -48,6 +51,14 @@ function IconPlay() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <polygon points="5 3 19 12 5 21 5 3"/>
+    </svg>
+  );
+}
+
+function IconStop() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="5" y="5" width="14" height="14" rx="2"/>
     </svg>
   );
 }
@@ -122,11 +133,13 @@ export default function Dashboard({
   signOutAction: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [requesting, setRequesting] = useState(false);
+  // Which action (if any) we just asked for but haven't seen confirmed by a
+  // poll yet. Drives the button's optimistic "Starting…"/"Stopping…" look.
+  const [pendingAction, setPendingAction] = useState<"start" | "stop" | null>(null);
   const [copied, setCopied] = useState(false);
-  // Holds off clearing `requesting` until this timestamp, so the button
-  // doesn't flicker back to "Start Server" while waiting for the Pi agent's
-  // next poll (up to 5s) to actually pick up the queued start command.
+  // Holds off clearing `pendingAction` until this timestamp, so the button
+  // doesn't flicker back to its resting label while waiting for the Pi
+  // agent's next poll (up to 5s) to actually pick up the queued command.
   const requestUntilRef = useRef(0);
 
   const fetchStatus = useCallback(async () => {
@@ -135,10 +148,13 @@ export default function Dashboard({
       if (res.ok) {
         const data: StatusResponse = await res.json();
         setStatus(data);
-        const settled = data.state === "starting" || data.state === "online" || data.state === "error";
-        if (settled || Date.now() >= requestUntilRef.current) {
-          setRequesting(false);
-        }
+        setPendingAction((prev) => {
+          if (!prev) return prev;
+          const settled =
+            (prev === "start" && data.state !== "offline") ||
+            (prev === "stop" && data.state !== "online");
+          return settled || Date.now() >= requestUntilRef.current ? null : prev;
+        });
       }
     } catch {
       // Transient network hiccup — next poll retries.
@@ -152,9 +168,17 @@ export default function Dashboard({
   }, [fetchStatus]);
 
   async function handleStart() {
-    setRequesting(true);
+    setPendingAction("start");
     requestUntilRef.current = Date.now() + 5000;
     await fetch("/api/start-server", { method: "POST" });
+    fetchStatus();
+    setTimeout(fetchStatus, 5000);
+  }
+
+  async function handleStop() {
+    setPendingAction("stop");
+    requestUntilRef.current = Date.now() + 5000;
+    await fetch("/api/stop-server", { method: "POST" });
     fetchStatus();
     setTimeout(fetchStatus, 5000);
   }
@@ -176,13 +200,17 @@ export default function Dashboard({
     ? Math.max(0, Math.round((Date.now() - status.updatedAt) / 1000))
     : null;
 
-  const pending = requesting || state === "starting";
+  const starting = pendingAction === "start" || state === "starting";
+  const stopping = pendingAction === "stop" || state === "stopping";
+  const pending = starting || stopping;
 
-  const buttonLabel = pending
+  const buttonLabel = starting
     ? "Starting…"
-    : state === "online"
-      ? "Server Online"
-      : "Start Server";
+    : stopping
+      ? "Stopping…"
+      : state === "online"
+        ? "Stop Server"
+        : "Start Server";
 
   const playersValue =
     status?.playersOnline != null && status?.playersMax != null
@@ -240,12 +268,12 @@ export default function Dashboard({
           </div>
 
           <button
-            className={`start-btn${pending ? " start-btn--pending" : ""}`}
-            onClick={handleStart}
-            disabled={pending || state === "online"}
+            className={`start-btn${pending ? " start-btn--pending" : ""}${state === "online" && !pending ? " start-btn--stop" : ""}`}
+            onClick={state === "online" ? handleStop : handleStart}
+            disabled={pending}
           >
             <span className="start-btn-top">
-              {state !== "online" && <IconPlay />}
+              {state === "online" || stopping ? <IconStop /> : <IconPlay />}
               {buttonLabel}
             </span>
           </button>
