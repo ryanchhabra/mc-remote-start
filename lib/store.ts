@@ -17,6 +17,17 @@ interface StoreShape {
   detail: string;
   updatedAt: number;
   pendingCommand: "start" | null;
+  playersOnline: number | null;
+  playersMax: number | null;
+  version: string | null;
+  uptimeSeconds: number | null;
+}
+
+interface ServerStats {
+  playersOnline?: number | null;
+  playersMax?: number | null;
+  version?: string | null;
+  uptimeSeconds?: number | null;
 }
 
 const globalStore = globalThis as unknown as { __mcStore?: StoreShape };
@@ -27,6 +38,10 @@ if (!globalStore.__mcStore) {
     detail: "",
     updatedAt: Date.now(),
     pendingCommand: null,
+    playersOnline: null,
+    playersMax: null,
+    version: null,
+    uptimeSeconds: null,
   };
 }
 
@@ -37,13 +52,21 @@ export function getStatus() {
     state: store.state,
     detail: store.detail,
     updatedAt: store.updatedAt,
+    playersOnline: store.playersOnline,
+    playersMax: store.playersMax,
+    version: store.version,
+    uptimeSeconds: store.uptimeSeconds,
   };
 }
 
-export function setStatus(state: ServerState, detail = "") {
+export function setStatus(state: ServerState, detail = "", stats: ServerStats = {}) {
   store.state = state;
   store.detail = detail;
   store.updatedAt = Date.now();
+  store.playersOnline = stats.playersOnline ?? null;
+  store.playersMax = stats.playersMax ?? null;
+  store.version = stats.version ?? null;
+  store.uptimeSeconds = stats.uptimeSeconds ?? null;
 }
 
 export function queueStartCommand() {

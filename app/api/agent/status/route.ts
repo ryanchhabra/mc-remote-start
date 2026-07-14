@@ -18,6 +18,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid state" }, { status: 400 });
   }
 
-  setStatus(body.state, body.detail ?? "");
+  setStatus(body.state, body.detail ?? "", {
+    playersOnline: typeof body.playersOnline === "number" ? body.playersOnline : null,
+    playersMax: typeof body.playersMax === "number" ? body.playersMax : null,
+    version: typeof body.version === "string" ? body.version : null,
+    uptimeSeconds: typeof body.uptimeSeconds === "number" ? body.uptimeSeconds : null,
+  });
   return NextResponse.json({ ok: true });
 }
