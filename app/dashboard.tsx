@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type ServerState = "offline" | "starting" | "online" | "error";
 
@@ -106,6 +106,10 @@ export default function Dashboard({
 }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [requesting, setRequesting] = useState(false);
+  // Holds off clearing `requesting` until this timestamp, so the button
+  // doesn't flicker back to "Start Server" while waiting for the Pi agent's
+  // next poll (up to 5s) to actually pick up the queued start command.
+  const requestUntilRef = useRef(0);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -113,7 +117,10 @@ export default function Dashboard({
       if (res.ok) {
         const data: StatusResponse = await res.json();
         setStatus(data);
-        if (data.state !== "starting") setRequesting(false);
+        const settled = data.state === "starting" || data.state === "online" || data.state === "error";
+        if (settled || Date.now() >= requestUntilRef.current) {
+          setRequesting(false);
+        }
       }
     } catch {
       // Transient network hiccup — next poll retries.
@@ -128,8 +135,10 @@ export default function Dashboard({
 
   async function handleStart() {
     setRequesting(true);
+    requestUntilRef.current = Date.now() + 5000;
     await fetch("/api/start-server", { method: "POST" });
     fetchStatus();
+    setTimeout(fetchStatus, 5000);
   }
 
   const state = status?.state ?? "offline";
