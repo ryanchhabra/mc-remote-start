@@ -91,6 +91,23 @@ function IconWifi() {
   );
 }
 
+function IconCopy() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Dashboard({
@@ -106,6 +123,7 @@ export default function Dashboard({
 }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [copied, setCopied] = useState(false);
   // Holds off clearing `requesting` until this timestamp, so the button
   // doesn't flicker back to "Start Server" while waiting for the Pi agent's
   // next poll (up to 5s) to actually pick up the queued start command.
@@ -141,6 +159,17 @@ export default function Dashboard({
     setTimeout(fetchStatus, 5000);
   }
 
+  async function handleCopyAddress() {
+    if (!serverAddress) return;
+    try {
+      await navigator.clipboard.writeText(serverAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard permissions denied — nothing else we can do here.
+    }
+  }
+
   const state = status?.state ?? "offline";
 
   const secondsAgo = status
@@ -161,6 +190,13 @@ export default function Dashboard({
 
   const uptimeValue =
     status?.uptimeSeconds != null ? formatUptime(status.uptimeSeconds) : "—";
+
+  const [addressHost, addressPort] = serverAddress
+    ? (() => {
+        const i = serverAddress.lastIndexOf(":");
+        return i === -1 ? [serverAddress, null] : [serverAddress.slice(0, i), serverAddress.slice(i + 1)];
+      })()
+    : ["—", null];
 
   const AvatarEl = userImage ? (
     <img className="user-avatar" src={userImage} alt={userName} referrerPolicy="no-referrer" />
@@ -234,15 +270,30 @@ export default function Dashboard({
             <span className="stat-card-value">{status?.version ?? "—"}</span>
             <span className="stat-card-sub">{status?.version ? "Java Edition" : "—"}</span>
           </div>
-          <div className="stat-card">
-            <span className="stat-card-label">Address</span>
-            <span className="stat-card-icon"><IconWifi /></span>
-            <span className={`stat-card-value${serverAddress && serverAddress.length > 10 ? " stat-card-value--small" : ""}`}>
-              {serverAddress ?? "—"}
-            </span>
-            <span className="stat-card-sub">{state === "online" ? "Active" : "Not running"}</span>
-          </div>
         </div>
+
+        {/* Address */}
+        <section className="address-card" aria-label="Server address">
+          <div className="address-card-top">
+            <span className="address-card-icon"><IconWifi /></span>
+            <span className="stat-card-label">Address</span>
+            <span className="address-card-sub">{state === "online" ? "Active" : "Not running"}</span>
+          </div>
+
+          <div className="address-value-row">
+            <span className="address-value">{addressHost}</span>
+            {addressPort && <span className="address-port">:{addressPort}</span>}
+          </div>
+
+          <button
+            className="copy-address-btn"
+            onClick={handleCopyAddress}
+            disabled={!serverAddress}
+          >
+            {copied ? <IconCheck /> : <IconCopy />}
+            {copied ? "Copied" : "Copy Address"}
+          </button>
+        </section>
 
         {/* Footer */}
         <footer className="dashboard-footer">

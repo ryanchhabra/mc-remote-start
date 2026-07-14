@@ -337,7 +337,7 @@ body::before {
 /* ── Stats grid ──────────────────────────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   animation: fade-up 0.4s ease 0.12s backwards;
 }
@@ -374,11 +374,91 @@ body::before {
   white-space: nowrap;
 }
 
-.stat-card-value--small { font-size: 12px; white-space: normal; word-break: break-all; }
-
 .stat-card-sub {
   font-size: 11px;
   color: var(--muted);
+}
+
+/* ── Address card ────────────────────────────── */
+.address-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fade-up 0.4s ease 0.16s backwards;
+}
+
+.address-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.address-card-icon {
+  color: var(--muted);
+  display: flex;
+}
+
+.address-card-sub {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.scene[data-state="online"] .address-card-sub { color: var(--green); }
+
+.address-value-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-family: var(--font-mono), monospace;
+  line-height: 1.15;
+}
+
+.address-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.address-port {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.copy-address-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--font-display), sans-serif;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.copy-address-btn:hover:not(:disabled) { border-color: var(--muted); }
+
+.copy-address-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.copy-address-btn:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
 }
 
 /* ── Activity card ───────────────────────────── */
@@ -626,10 +706,14 @@ body::before {
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 520px) {
   .dashboard-main { padding: 20px 16px max(20px, env(safe-area-inset-bottom)); }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-card { padding: 14px 10px 16px; }
+  .stat-card-value { font-size: 18px; }
   .welcome-heading { font-size: 30px; }
   .user-avatar, .user-avatar--fallback { width: 52px; height: 52px; }
   .status-heading { font-size: 24px; }
+  .address-value { font-size: 19px; }
+  .address-port { font-size: 19px; }
 }
 
 /* ── Reduced motion ──────────────────────────── */
