@@ -176,12 +176,13 @@ export default function Dashboard({
     ? Math.max(0, Math.round((Date.now() - status.updatedAt) / 1000))
     : null;
 
-  const buttonLabel =
-    requesting || state === "starting"
-      ? "Starting…"
-      : state === "online"
-        ? "Server Online"
-        : "Start Server";
+  const pending = requesting || state === "starting";
+
+  const buttonLabel = pending
+    ? "Starting…"
+    : state === "online"
+      ? "Server Online"
+      : "Start Server";
 
   const playersValue =
     status?.playersOnline != null && status?.playersMax != null
@@ -239,9 +240,9 @@ export default function Dashboard({
           </div>
 
           <button
-            className="start-btn"
+            className={`start-btn${pending ? " start-btn--pending" : ""}`}
             onClick={handleStart}
-            disabled={requesting || state === "starting" || state === "online"}
+            disabled={pending || state === "online"}
           >
             <span className="start-btn-top">
               {state !== "online" && <IconPlay />}

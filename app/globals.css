@@ -313,7 +313,7 @@ body::before {
   opacity: 1;
 }
 
-.scene[data-state="starting"] .start-btn {
+.start-btn--pending {
   background: var(--amber);
   color: #1a0f00;
   opacity: 0.65;
