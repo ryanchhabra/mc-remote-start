@@ -18,6 +18,7 @@ interface StoreShape {
   detail: string;
   updatedAt: number;
   pendingCommand: PendingCommand;
+  pendingCommandQueuedAt: number | null;
   playersOnline: number | null;
   playersMax: number | null;
   version: string | null;
@@ -39,6 +40,7 @@ if (!globalStore.__mcStore) {
     detail: "",
     updatedAt: Date.now(),
     pendingCommand: null,
+    pendingCommandQueuedAt: null,
     playersOnline: null,
     playersMax: null,
     version: null,
@@ -48,7 +50,41 @@ if (!globalStore.__mcStore) {
 
 const store = globalStore.__mcStore;
 
+// The agent polls for commands and reports status roughly every 5s while
+// it's alive. If we haven't heard from it in noticeably longer than that,
+// something's wrong (script not running, PC/network unreachable) -- don't
+// keep trusting a stale "online"/"starting"/"stopping" state forever.
+const COMMAND_PICKUP_GRACE_MS = 6_000;
+const REPORT_STALE_MS = 12_000;
+const UNREACHABLE_HOLD_MS = 8_000;
+
+function unreachableOrOffline(elapsedPastThreshold: number) {
+  return {
+    state: "offline" as ServerState,
+    detail: elapsedPastThreshold < UNREACHABLE_HOLD_MS ? "PC unreachable" : "",
+    updatedAt: store.updatedAt,
+    playersOnline: null,
+    playersMax: null,
+    version: null,
+    uptimeSeconds: null,
+  };
+}
+
 export function getStatus() {
+  const now = Date.now();
+
+  if (store.pendingCommand && store.pendingCommandQueuedAt) {
+    const sinceQueued = now - store.pendingCommandQueuedAt;
+    if (sinceQueued > COMMAND_PICKUP_GRACE_MS) {
+      return unreachableOrOffline(sinceQueued - COMMAND_PICKUP_GRACE_MS);
+    }
+  } else if (store.state === "online" || store.state === "starting" || store.state === "stopping") {
+    const sinceReport = now - store.updatedAt;
+    if (sinceReport > REPORT_STALE_MS) {
+      return unreachableOrOffline(sinceReport - REPORT_STALE_MS);
+    }
+  }
+
   return {
     state: store.state,
     detail: store.detail,
@@ -72,14 +108,17 @@ export function setStatus(state: ServerState, detail = "", stats: ServerStats = 
 
 export function queueStartCommand() {
   store.pendingCommand = "start";
+  store.pendingCommandQueuedAt = Date.now();
 }
 
 export function queueStopCommand() {
   store.pendingCommand = "stop";
+  store.pendingCommandQueuedAt = Date.now();
 }
 
 export function consumePendingCommand() {
   const command = store.pendingCommand;
   store.pendingCommand = null;
+  store.pendingCommandQueuedAt = null;
   return command;
 }
