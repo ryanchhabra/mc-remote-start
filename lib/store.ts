@@ -11,7 +11,7 @@
 // nothing else in the app needs to change.
 
 export type ServerState = "offline" | "starting" | "online" | "stopping" | "error";
-export type PendingCommand = "start" | "stop" | null;
+export type PendingCommand = "start" | "stop" | "stop_and_shutdown" | "shutdown" | null;
 
 interface StoreShape {
   state: ServerState;
@@ -24,6 +24,7 @@ interface StoreShape {
   version: string | null;
   uptimeSeconds: number | null;
   serverAddress: string | null;
+  pcOnline: boolean | null;
 }
 
 interface ServerStats {
@@ -32,6 +33,7 @@ interface ServerStats {
   version?: string | null;
   uptimeSeconds?: number | null;
   serverAddress?: string | null;
+  pcOnline?: boolean;
 }
 
 const globalStore = globalThis as unknown as { __mcStore?: StoreShape };
@@ -48,6 +50,7 @@ if (!globalStore.__mcStore) {
     version: null,
     uptimeSeconds: null,
     serverAddress: null,
+    pcOnline: null,
   };
 }
 
@@ -71,6 +74,10 @@ function unreachableOrOffline(elapsedPastThreshold: number) {
     version: null,
     uptimeSeconds: null,
     serverAddress: store.serverAddress,
+    // Unlike the address, whether the PC is on isn't safe to assume once
+    // we've lost confidence in reports -- don't offer a "turn off PC"
+    // action based on stale info.
+    pcOnline: null,
   };
 }
 
@@ -98,6 +105,7 @@ export function getStatus() {
     version: store.version,
     uptimeSeconds: store.uptimeSeconds,
     serverAddress: store.serverAddress,
+    pcOnline: store.pcOnline,
   };
 }
 
@@ -115,6 +123,11 @@ export function setStatus(state: ServerState, detail = "", stats: ServerStats = 
   if (stats.serverAddress) {
     store.serverAddress = stats.serverAddress;
   }
+  // Same idea: only update when the agent actually knows, so a report that
+  // omits it (still figuring things out) doesn't blank the last known value.
+  if (typeof stats.pcOnline === "boolean") {
+    store.pcOnline = stats.pcOnline;
+  }
 }
 
 export function queueStartCommand() {
@@ -124,6 +137,16 @@ export function queueStartCommand() {
 
 export function queueStopCommand() {
   store.pendingCommand = "stop";
+  store.pendingCommandQueuedAt = Date.now();
+}
+
+export function queueStopAndShutdownCommand() {
+  store.pendingCommand = "stop_and_shutdown";
+  store.pendingCommandQueuedAt = Date.now();
+}
+
+export function queueShutdownCommand() {
+  store.pendingCommand = "shutdown";
   store.pendingCommandQueuedAt = Date.now();
 }
 

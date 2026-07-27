@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     version: typeof body.version === "string" ? body.version : null,
     uptimeSeconds: typeof body.uptimeSeconds === "number" ? body.uptimeSeconds : null,
     serverAddress: typeof body.serverAddress === "string" ? body.serverAddress : null,
+    pcOnline: typeof body.pcOnline === "boolean" ? body.pcOnline : undefined,
   });
   return NextResponse.json({ ok: true });
 }

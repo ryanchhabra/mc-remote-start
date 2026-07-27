@@ -13,6 +13,7 @@ interface StatusResponse {
   version: string | null;
   uptimeSeconds: number | null;
   serverAddress: string | null;
+  pcOnline: boolean | null;
 }
 
 const STATE_LABELS: Record<ServerState, string> = {
@@ -60,6 +61,15 @@ function IconStop() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <rect x="5" y="5" width="14" height="14" rx="2"/>
+    </svg>
+  );
+}
+
+function IconPower() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+      <line x1="12" y1="2" x2="12" y2="12"/>
     </svg>
   );
 }
@@ -134,7 +144,9 @@ export default function Dashboard({
   const [status, setStatus] = useState<StatusResponse | null>(null);
   // Which action (if any) we just asked for but haven't seen confirmed by a
   // poll yet. Drives the button's optimistic "Starting…"/"Stopping…" look.
-  const [pendingAction, setPendingAction] = useState<"start" | "stop" | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    "start" | "stop" | "stop_and_shutdown" | "shutdown" | null
+  >(null);
   const [copied, setCopied] = useState(false);
   // Holds off clearing `pendingAction` until this timestamp, so the button
   // doesn't flicker back to its resting label while waiting for the Pi
@@ -151,7 +163,8 @@ export default function Dashboard({
           if (!prev) return prev;
           const settled =
             (prev === "start" && data.state !== "offline") ||
-            (prev === "stop" && data.state !== "online");
+            ((prev === "stop" || prev === "stop_and_shutdown") && data.state !== "online") ||
+            (prev === "shutdown" && data.pcOnline !== true);
           return settled || Date.now() >= requestUntilRef.current ? null : prev;
         });
       }
@@ -182,6 +195,22 @@ export default function Dashboard({
     setTimeout(fetchStatus, 5000);
   }
 
+  async function handleStopAndShutdown() {
+    setPendingAction("stop_and_shutdown");
+    requestUntilRef.current = Date.now() + 5000;
+    await fetch("/api/stop-and-shutdown-server", { method: "POST" });
+    fetchStatus();
+    setTimeout(fetchStatus, 5000);
+  }
+
+  async function handleShutdownPc() {
+    setPendingAction("shutdown");
+    requestUntilRef.current = Date.now() + 5000;
+    await fetch("/api/shutdown-pc", { method: "POST" });
+    fetchStatus();
+    setTimeout(fetchStatus, 5000);
+  }
+
   async function handleCopyAddress() {
     if (!status?.serverAddress) return;
     try {
@@ -202,6 +231,9 @@ export default function Dashboard({
   const starting = pendingAction === "start" || state === "starting";
   const stopping = pendingAction === "stop" || state === "stopping";
   const pending = starting || stopping;
+  // Also blocks the primary button while one of the PC-shutdown actions
+  // below (their own buttons) is in flight, so actions can't overlap.
+  const busy = pending || pendingAction === "stop_and_shutdown" || pendingAction === "shutdown";
 
   const buttonLabel = starting
     ? "Starting…"
@@ -210,6 +242,12 @@ export default function Dashboard({
       : state === "online"
         ? "Stop Server"
         : "Start Server";
+
+  const stopShutdownPending = pendingAction === "stop_and_shutdown";
+  const showStopAndShutdown = state === "online" || stopShutdownPending;
+
+  const shutdownOnlyPending = pendingAction === "shutdown";
+  const showShutdownOnly = state !== "online" && (status?.pcOnline === true || shutdownOnlyPending);
 
   const playersValue =
     status?.playersOnline != null && status?.playersMax != null
@@ -270,13 +308,35 @@ export default function Dashboard({
           <button
             className={`start-btn${pending ? " start-btn--pending" : ""}${state === "online" && !pending ? " start-btn--stop" : ""}`}
             onClick={state === "online" ? handleStop : handleStart}
-            disabled={pending}
+            disabled={busy}
           >
             <span className="start-btn-top">
               {state === "online" || stopping ? <IconStop /> : <IconPlay />}
               {buttonLabel}
             </span>
           </button>
+
+          {showStopAndShutdown && (
+            <button
+              className="secondary-action-btn"
+              onClick={handleStopAndShutdown}
+              disabled={busy}
+            >
+              <IconPower />
+              {stopShutdownPending ? "Shutting Down…" : "Stop & Shut Down PC"}
+            </button>
+          )}
+
+          {showShutdownOnly && (
+            <button
+              className="secondary-action-btn"
+              onClick={handleShutdownPc}
+              disabled={busy}
+            >
+              <IconPower />
+              {shutdownOnlyPending ? "Shutting Down…" : "Turn Off PC"}
+            </button>
+          )}
         </section>
 
         {/* Stats */}
