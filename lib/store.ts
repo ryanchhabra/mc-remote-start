@@ -65,19 +65,22 @@ const REPORT_STALE_MS = 12_000;
 const UNREACHABLE_HOLD_MS = 8_000;
 
 function unreachableOrOffline(elapsedPastThreshold: number) {
+  const stillWithinGrace = elapsedPastThreshold < UNREACHABLE_HOLD_MS;
+  // If the last real report confirmed the PC was on, don't contradict that
+  // just because the agent's gone quiet for a bit -- it's far more likely
+  // mid-operation (e.g. waiting on a slow network round trip) than the PC
+  // having actually turned off in the meantime.
+  const detail = !stillWithinGrace ? "" : store.pcOnline === true ? "Waiting for agent" : "PC unreachable";
   return {
     state: "offline" as ServerState,
-    detail: elapsedPastThreshold < UNREACHABLE_HOLD_MS ? "PC unreachable" : "",
+    detail,
     updatedAt: store.updatedAt,
     playersOnline: null,
     playersMax: null,
     version: null,
     uptimeSeconds: null,
     serverAddress: store.serverAddress,
-    // Unlike the address, whether the PC is on isn't safe to assume once
-    // we've lost confidence in reports -- don't offer a "turn off PC"
-    // action based on stale info.
-    pcOnline: null,
+    pcOnline: store.pcOnline,
   };
 }
 
