@@ -23,6 +23,7 @@ interface StoreShape {
   playersMax: number | null;
   version: string | null;
   uptimeSeconds: number | null;
+  serverAddress: string | null;
 }
 
 interface ServerStats {
@@ -30,6 +31,7 @@ interface ServerStats {
   playersMax?: number | null;
   version?: string | null;
   uptimeSeconds?: number | null;
+  serverAddress?: string | null;
 }
 
 const globalStore = globalThis as unknown as { __mcStore?: StoreShape };
@@ -45,6 +47,7 @@ if (!globalStore.__mcStore) {
     playersMax: null,
     version: null,
     uptimeSeconds: null,
+    serverAddress: null,
   };
 }
 
@@ -67,6 +70,7 @@ function unreachableOrOffline(elapsedPastThreshold: number) {
     playersMax: null,
     version: null,
     uptimeSeconds: null,
+    serverAddress: store.serverAddress,
   };
 }
 
@@ -93,6 +97,7 @@ export function getStatus() {
     playersMax: store.playersMax,
     version: store.version,
     uptimeSeconds: store.uptimeSeconds,
+    serverAddress: store.serverAddress,
   };
 }
 
@@ -104,6 +109,12 @@ export function setStatus(state: ServerState, detail = "", stats: ServerStats = 
   store.playersMax = stats.playersMax ?? null;
   store.version = stats.version ?? null;
   store.uptimeSeconds = stats.uptimeSeconds ?? null;
+  // Unlike the other stats, the address isn't tied to online state -- keep
+  // showing the last known one instead of blanking it out on every update
+  // that doesn't include it (e.g. the agent's public-IP lookup failed).
+  if (stats.serverAddress) {
+    store.serverAddress = stats.serverAddress;
+  }
 }
 
 export function queueStartCommand() {

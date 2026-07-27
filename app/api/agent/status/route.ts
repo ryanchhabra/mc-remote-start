@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     playersMax: typeof body.playersMax === "number" ? body.playersMax : null,
     version: typeof body.version === "string" ? body.version : null,
     uptimeSeconds: typeof body.uptimeSeconds === "number" ? body.uptimeSeconds : null,
+    serverAddress: typeof body.serverAddress === "string" ? body.serverAddress : null,
   });
   return NextResponse.json({ ok: true });
 }

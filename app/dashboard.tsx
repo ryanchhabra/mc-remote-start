@@ -12,6 +12,7 @@ interface StatusResponse {
   playersMax: number | null;
   version: string | null;
   uptimeSeconds: number | null;
+  serverAddress: string | null;
 }
 
 const STATE_LABELS: Record<ServerState, string> = {
@@ -124,12 +125,10 @@ function IconCheck() {
 export default function Dashboard({
   userName,
   userImage,
-  serverAddress,
   signOutAction,
 }: {
   userName: string;
   userImage?: string;
-  serverAddress: string | null;
   signOutAction: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -184,9 +183,9 @@ export default function Dashboard({
   }
 
   async function handleCopyAddress() {
-    if (!serverAddress) return;
+    if (!status?.serverAddress) return;
     try {
-      await navigator.clipboard.writeText(serverAddress);
+      await navigator.clipboard.writeText(status.serverAddress);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -220,10 +219,11 @@ export default function Dashboard({
   const uptimeValue =
     status?.uptimeSeconds != null ? formatUptime(status.uptimeSeconds) : "—";
 
-  const [addressHost, addressPort] = serverAddress
+  const [addressHost, addressPort] = status?.serverAddress
     ? (() => {
-        const i = serverAddress.lastIndexOf(":");
-        return i === -1 ? [serverAddress, null] : [serverAddress.slice(0, i), serverAddress.slice(i + 1)];
+        const addr = status.serverAddress as string;
+        const i = addr.lastIndexOf(":");
+        return i === -1 ? [addr, null] : [addr.slice(0, i), addr.slice(i + 1)];
       })()
     : ["—", null];
 
@@ -317,7 +317,7 @@ export default function Dashboard({
           <button
             className="copy-address-btn"
             onClick={handleCopyAddress}
-            disabled={!serverAddress}
+            disabled={!status?.serverAddress}
           >
             {copied ? <IconCheck /> : <IconCopy />}
             {copied ? "Copied" : "Copy Address"}

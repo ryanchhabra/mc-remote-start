@@ -3,7 +3,6 @@ import Dashboard from "./dashboard";
 
 export default async function Home() {
   const session = await auth();
-  const serverAddress = process.env.SERVER_ADDRESS ?? null;
 
   if (!session) {
     return (
@@ -44,7 +43,6 @@ export default async function Home() {
     <Dashboard
       userName={session.user?.name ?? "friend"}
       userImage={session.user?.image ?? undefined}
-      serverAddress={serverAddress}
       signOutAction={async () => {
         "use server";
         await signOut();
